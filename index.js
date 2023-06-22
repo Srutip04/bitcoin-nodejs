@@ -6,9 +6,10 @@ const ecc = require("tiny-secp256k1");
 const bip32 = BIP32Factory(ecc);
 const bitcoin = require("bitcoinjs-lib");
 const bip39 = require("bip39");
-
 const axios = require("axios");
+
 const path = `m/44'/1'/0'/0`;
+
 // File path to store wallets
 const WALLET_FILE_PATH = "./wallets.json";
 
@@ -201,28 +202,38 @@ async function getNextUnusedAddress(wallet) {
   const network = bitcoin.networks.testnet;
   const root = bip32.fromSeed(seed, network);
   const account = root.derivePath("m/44'/1'/0'");
+
   let index = 0;
-  const maxIterations = 1000; // Set a maximum number of iterations
+  let unusedAddress = null;
 
-  while (index < maxIterations) {
-    const node = account.derive(index);
-    try {
-      const { address } = bitcoin.payments.p2pkh({
-        pubkey: node.publicKey,
-        network,
-      });
+  try {
+    while (!unusedAddress) {
+      const node = account.derive(index);
+      try {
+        const { address } = bitcoin.payments.p2pkh({
+          pubkey: node.publicKey,
+          network,
+        });
 
-      if (!(await hasTransactions(address))) {
-        return node;
+        if (!(await hasTransactions(address))) {
+          unusedAddress = address;
+        }
+      } catch (error) {
+        console.log("Error generating P2PKH address:", error);
+        throw error;
       }
-    } catch (error) {
-      console.log("Error generating P2PKH address:", error);
-      throw error;
+      index++;
     }
-    index++;
+  } catch (error) {
+    console.log("Error finding next unused address:", error);
+    throw error;
   }
 
-  throw new Error("No unused address found after maximum iterations.");
+  if (!unusedAddress) {
+    throw new Error("No unused address found.");
+  }
+
+  return account.derive(index - 1);
 }
 
 // Check if an address has any transactions
