@@ -52,6 +52,12 @@ Available commands:
 
 Note: Replace `<name>` with the name of the wallet you want to create, import, or perform actions on.
 
+### Example
+- For creating a new wallet run:
+  ```bash
+     node index.js create <name>
+  ```
+
 3. Follow the instructions provided by the program to create, import, or manage your Bitcoin wallets.
 
 ## API Key
